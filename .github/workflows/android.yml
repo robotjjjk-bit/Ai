@@ -36,6 +36,22 @@ jobs:
       - name: Setup Gradle (cache only, use project wrapper)
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: rikkahub/web-ui/pnpm-lock.yaml
+
+      - name: Install web-ui dependencies
+        working-directory: rikkahub/web-ui
+        run: pnpm install --frozen-lockfile
+
       - name: Provide google-services.json (secret or dummy)
         env:
           GS_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
