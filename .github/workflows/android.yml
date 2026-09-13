@@ -10,6 +10,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 1
 
       - name: Set up JDK 17
         uses: actions/setup-java@v4
@@ -31,18 +34,24 @@ jobs:
         with:
           gradle-version: 8.9
 
-      - name: Generate wrapper + build arm64 debug
+      - name: Build RikkaHub (base, arm64) + NexChat extras
         run: |
-          gradle wrapper --gradle-version 8.9
-          chmod +x ./gradlew
-          ./gradlew :app:assembleDebug --stacktrace
+          ls
+          if [ -f rikkahub/gradlew ]; then
+            cd rikkahub && chmod +x ./gradlew && ./gradlew :app:assembleDebug --stacktrace
+            find app/build/outputs/apk -type f | head -n 20
+          else
+            echo "submodule not fetched"
+          fi
+          cd ..
+          if [ -f ./gradlew ]; then ./gradlew :app:assembleDebug --stacktrace; else echo "nexchat extras: web/ needs no build"; fi
+          find . -path "*/outputs/apk/debug/*.apk" | head -n 20
 
-      - name: List APKs
-        run: find app/build/outputs/apk -type f | head -n 20
-
-      - name: Upload arm64 APK
+      - name: Upload arm64 APKs
         uses: actions/upload-artifact@v4
         with:
-          name: nexchat-arm64-debug
-          path: app/build/outputs/apk/debug/*.apk
+          name: apk-arm64-debug
+          path: |
+            rikkahub/app/build/outputs/apk/debug/*.apk
+            app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
