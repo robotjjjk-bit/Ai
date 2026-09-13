@@ -3,6 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.dagger.hilt.android")
+    id("com.google.devtools.ksp")
     id("androidx.room")
 }
 
@@ -15,11 +16,24 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
+        ndk { abiFilters += listOf("arm64-v8a") }
+    }
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a")
+            isUniversalApk = false
+        }
     }
     buildTypes {
+        debug {
+            // arm64 debug APK, no minify for speed
+            applicationIdSuffix = ".debug"
+        }
         release {
-            isMinifyEnabled = true
-            isShrinkResources = true
+            isMinifyEnabled = false
+            isShrinkResources = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }

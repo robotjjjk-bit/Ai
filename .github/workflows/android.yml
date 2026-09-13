@@ -1,12 +1,12 @@
-name: Android CI
+name: Android CI (arm64)
 
 on:
   push:
-    branches: [ main, master ]
-  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  build:
+  build-arm64:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -21,19 +21,28 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Grant execute permission for gradlew
+      - name: Accept licenses + install platform
         run: |
-          if [ -f ./gradlew ]; then chmod +x ./gradlew; fi
+          yes | sdkmanager --licenses || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
-      - name: Build (if gradle wrapper exists)
+      - name: Setup Gradle 8.9
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: Generate wrapper + build arm64 debug
         run: |
-          if [ -f ./gradlew ]; then ./gradlew :app:assembleDebug --stacktrace;
-          else echo "No gradlew yet — sync project in Android Studio to generate wrapper, web/ needs no build."; fi
+          gradle wrapper --gradle-version 8.9
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug --stacktrace
 
-      - name: Upload APK
-        if: success()
+      - name: List APKs
+        run: find app/build/outputs/apk -type f | head -n 20
+
+      - name: Upload arm64 APK
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug
+          name: nexchat-arm64-debug
           path: app/build/outputs/apk/debug/*.apk
-          if-no-files-found: ignore
+          if-no-files-found: error
