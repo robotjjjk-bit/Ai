@@ -5,9 +5,14 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-arm64:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
         with:
@@ -19,7 +24,6 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-          cache: gradle
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
@@ -29,29 +33,58 @@ jobs:
           yes | sdkmanager --licenses || true
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools"
 
-      - name: Setup Gradle 8.9
+      - name: Setup Gradle (cache only, use project wrapper)
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: 8.9
 
-      - name: Build RikkaHub (base, arm64) + NexChat extras
+      - name: Provide google-services.json (secret or dummy)
+        env:
+          GS_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
         run: |
-          ls
-          if [ -f rikkahub/gradlew ]; then
-            cd rikkahub && chmod +x ./gradlew && ./gradlew :app:assembleDebug --stacktrace
-            find app/build/outputs/apk -type f | head -n 20
+          if [ -n "$GS_JSON" ]; then
+            echo "$GS_JSON" | base64 -d > rikkahub/app/google-services.json
+            echo "using real google-services.json from secret"
           else
-            echo "submodule not fetched"
+            cat > rikkahub/app/google-services.json <<'JSON'
+            {
+              "project_info": {
+                "project_number": "000000000000",
+                "project_id": "dummy-project",
+                "storage_bucket": "dummy-project.appspot.com"
+              },
+              "client": [
+                {
+                  "client_info": {
+                    "mobilesdk_app_id": "1:000000000000:android:0000000000000000",
+                    "android_client_info": { "package_name": "me.rerere.rikkahub" }
+                  },
+                  "oauth_client": [],
+                  "api_key": [{ "current_key": "dummy" }]
+                },
+                {
+                  "client_info": {
+                    "mobilesdk_app_id": "1:000000000000:android:1111111111111111",
+                    "android_client_info": { "package_name": "me.rerere.rikkahub.debug" }
+                  },
+                  "oauth_client": [],
+                  "api_key": [{ "current_key": "dummy" }]
+                }
+              ],
+              "configuration_version": "1"
+            }
+          JSON
+            echo "using dummy google-services.json (Crashlytics no-op)"
           fi
-          cd ..
-          if [ -f ./gradlew ]; then ./gradlew :app:assembleDebug --stacktrace; else echo "nexchat extras: web/ needs no build"; fi
-          find . -path "*/outputs/apk/debug/*.apk" | head -n 20
+
+      - name: Build RikkaHub debug (arm64 split + universal)
+        run: |
+          cd rikkahub
+          chmod +x ./gradlew
+          ./gradlew :app:assembleDebug
+          find app/build/outputs/apk -type f | head -n 20
 
       - name: Upload arm64 APKs
         uses: actions/upload-artifact@v4
         with:
           name: apk-arm64-debug
-          path: |
-            rikkahub/app/build/outputs/apk/debug/*.apk
-            app/build/outputs/apk/debug/*.apk
+          path: rikkahub/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
