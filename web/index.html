@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NexChat — Document-style AI workspace</title>
+<link rel="stylesheet" href="styles.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,400;6..72,500&family=Geist+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.4/build/qrcode.min.js"></script>
+</head>
+<body>
+<div class="ambient" aria-hidden="true"></div>
+<header class="nav">
+  <div class="nav-inner">
+    <div class="brand"><span class="mark"></span><span>NexChat</span><span class="tag tag-blue">DOC v1.0</span></div>
+    <nav class="nav-links">
+      <a href="#chat">Chat</a><a href="#providers">Providers</a><a href="#workspace">Workspace</a><a href="#faq">Notes</a>
+    </nav>
+    <button id="newChatBtn" class="btn-primary">New chat</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero reveal">
+    <p class="kicker">AI CHAT CLIENT · ANDROID + WEB</p>
+    <h1>A calm place to talk with many models.</h1>
+    <p class="lede">One inbox for OpenAI, Anthropic, Gemini, Ollama, and your own endpoint. Keys stay in this browser. Plain text, files, and diagrams render in place.</p>
+    <div class="hero-meta">
+      <span class="tag tag-green">LOCAL KEYS</span>
+      <span class="tag tag-yellow">OPENAI-COMPATIBLE</span>
+      <span class="tag tag-blue">MCP READY</span>
+      <span class="mono">Press <kbd>Ctrl</kbd> + <kbd>K</kbd> for models</span>
+    </div>
+  </section>
+
+  <section id="chat" class="bento reveal">
+    <div class="card span-7">
+      <div class="osbar"><span></span><span></span><span></span><em>conversation.md</em></div>
+      <div class="chat-head">
+        <select id="providerSel" aria-label="Provider"></select>
+        <select id="modelSel" aria-label="Model"></select>
+        <label class="check"><input type="checkbox" id="searchToggle"> ground with search</label>
+      </div>
+      <div id="thread" class="thread"></div>
+      <div class="composer">
+        <textarea id="input" rows="3" placeholder="Write a message. Try: Summarize {{doc}} in {{tone}}."></textarea>
+        <div class="composer-row">
+          <label class="btn-ghost">Attach <input id="file" type="file" hidden accept="image/*,.pdf,.docx,.txt,.md"></label>
+          <button id="varBtn" class="btn-ghost">Variables</button>
+          <button id="sendBtn" class="btn-primary">Send</button>
+        </div>
+        <p id="attachNote" class="muted"></p>
+      </div>
+    </div>
+    <div class="card span-5">
+      <h3>Branching</h3>
+      <p class="muted">Retry any answer to keep both versions. Step through drafts without losing the thread.</p>
+      <div id="branchBox" class="branch-box mono">No branches yet.</div>
+      <h3>Memory</h3>
+      <p class="muted">Short summary kept per conversation, stored locally.</p>
+      <textarea id="memory" rows="4" placeholder="e.g. Prefers concise answers with sources."></textarea>
+      <h3>Prompt variables</h3>
+      <p class="muted">Detected from <span class="mono">{{name}}</span> in your draft.</p>
+      <div id="varBox" class="var-box"></div>
+    </div>
+  </section>
+
+  <section id="providers" class="reveal">
+    <h2>Providers</h2>
+    <p class="muted narrow">Add a base URL, key, and headers. Export as QR to move to Android, import the same JSON back.</p>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Saved</h3>
+        <div id="provList"></div>
+      </div>
+      <div class="card">
+        <h3>Add provider</h3>
+        <label>Name<input id="pName" value="Office gateway"></label>
+        <label>Base URL<input id="pUrl" value="https://api.openai.com"></label>
+        <label>Kind
+          <select id="pKind"><option>OPENAI</option><option>ANTHROPIC</option><option>GEMINI</option><option>OLLAMA</option><option>CUSTOM</option></select>
+        </label>
+        <label>Models (comma)<input id="pModels" value="gpt-4o-mini,gpt-4o"></label>
+        <label>API key<input id="pKey" type="password" placeholder="sk-…"></label>
+        <label>Headers JSON<input id="pHeaders" value="{}"></label>
+        <div class="row"><button id="pSave" class="btn-primary">Save</button><button id="pQr" class="btn-ghost">Show QR</button></div>
+        <canvas id="qr" width="180" height="180"></canvas>
+        <label>Import JSON<textarea id="pImport" rows="3" placeholder='{"v":1,"name":"…","baseUrl":"…"}'></textarea></label>
+        <button id="pImportBtn" class="btn-ghost">Import</button>
+      </div>
+    </div>
+  </section>
+
+  <section id="workspace" class="reveal">
+    <h2>Workspace</h2>
+    <p class="muted narrow">Files below are pasted into the model context. Keep briefings, style notes, or specs here.</p>
+    <div class="card">
+      <div class="osbar"><span></span><span></span><span></span><em>workspace / briefing.md</em></div>
+      <textarea id="work" rows="8">Project: Q3 support review
+Tone: direct, cite ticket IDs.
+Files: tickets.csv, policy.md</textarea>
+      <div class="row"><button id="workUse" class="btn-primary">Use in next message</button><span class="muted mono" id="workNote"></span></div>
+    </div>
+    <div class="grid-3">
+      <div class="card"><h3>Search</h3><p class="muted">Optional Brave/Tavily key. When enabled, top snippets are appended as context.</p><input id="sKey" type="password" placeholder="Search API key"><select id="sKind"><option value="brave">Brave</option><option value="tavily">Tavily</option></select></div>
+      <div class="card"><h3>MCP</h3><p class="muted">Point at an MCP HTTP endpoint to list tools. Calls use JSON-RPC.</p><input id="mcpUrl" placeholder="https://mcp.internal/tools"><button id="mcpBtn" class="btn-ghost">List tools</button><pre id="mcpOut" class="mono"></pre></div>
+      <div class="card"><h3>Render</h3><p class="muted">Markdown, tables, code, KaTeX, and Mermaid render inline.</p><pre class="mono">```mermaid&#10;graph TD; A-->B&#10;```&#10;$$E=mc^2$$</pre></div>
+    </div>
+  </section>
+
+  <section id="faq" class="reveal">
+    <h2>Notes</h2>
+    <div class="acc"><button>Where are keys stored? <span>+</span></button><div><p>In localStorage on this device only. Export shares secrets — handle the QR like a password.</p></div></div>
+    <div class="acc"><button>Which endpoint format? <span>+</span></button><div><p>OpenAI-compatible <span class="mono">/v1/chat/completions</span> by default. Anthropic and Gemini use their native paths.</p></div></div>
+    <div class="acc"><button>Android parity? <span>+</span></button><div><p>Same provider JSON works in the Android app under Settings → QR import.</p></div></div>
+  </section>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
